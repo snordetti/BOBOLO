@@ -1,13 +1,15 @@
-
 import os
 import re
 import html
 import base64
 import hashlib
+import time
+
 import fitz
 import streamlit as st
 from dotenv import load_dotenv
 from google import genai
+
 
 # =====================================================
 # CONFIGURACIÓN
@@ -22,44 +24,20 @@ st.set_page_config(
 
 load_dotenv()
 
-# =====================================================
-# COLORES PREDETERMINADOS
-# =====================================================
-
-COLORES_PREDETERMINADOS = {
-    "fondo": "#FFF2E8",
-    "lateral": "#B94F5B",
-    "tarjeta": "#FFFBF7",
-    "boton": "#EBA09A",
-    "titulo": "#613632",
-    "secundario": "#765650",
-    "aviso": "#FFE2D2",
-    "texto_boton": "#452923",
+COLORES_DEFAULT = {
+    "Fondo principal": "#FFF2E8",
+    "Barra lateral": "#B94F5B",
+    "Tarjetas": "#FFFBF7",
+    "Botones": "#EBA09A",
+    "Títulos": "#613632",
+    "Texto secundario": "#765650",
+    "Avisos": "#FFE2D2",
 }
 
-ETIQUETAS_COLORES = {
-    "fondo": "Fondo principal",
-    "lateral": "Barra lateral",
-    "tarjeta": "Tarjetas y paneles",
-    "boton": "Botones",
-    "titulo": "Títulos",
-    "secundario": "Texto secundario",
-    "aviso": "Avisos y mensajes destacados",
-    "texto_boton": "Texto de los botones",
-}
+if "colores" not in st.session_state:
+    st.session_state.colores = COLORES_DEFAULT.copy()
 
-# =====================================================
-# ESTADO PERSISTENTE
-# =====================================================
-
-# Los colores se conservan mientras dure la sesión.
-for clave, valor in COLORES_PREDETERMINADOS.items():
-    nombre_estado = f"color_{clave}"
-
-    if nombre_estado not in st.session_state:
-        st.session_state[nombre_estado] = valor
-
-valores_iniciales = {
+ESTADO_INICIAL = {
     "nombre_documento": "",
     "paginas_documento": [],
     "documento_bytes": None,
@@ -72,18 +50,17 @@ valores_iniciales = {
     "paginas_citadas": [],
 }
 
-for clave, valor in valores_iniciales.items():
+for clave, valor in ESTADO_INICIAL.items():
     if clave not in st.session_state:
         st.session_state[clave] = valor
 
 
 # =====================================================
-# IMÁGENES
+# FUNCIONES AUXILIARES PARA IMÁGENES
 # =====================================================
 
 def obtener_imagen_base64(nombre_archivo):
-    """Busca una imagen local y la convierte a base64."""
-
+    """Busca una imagen local y la retorna en formato base64."""
     for ext in [".jpg", ".jpeg", ".png"]:
         ruta = nombre_archivo + ext
 
@@ -93,8 +70,9 @@ def obtener_imagen_base64(nombre_archivo):
                     img_file.read()
                 ).decode()
 
-            tipo = "jpeg" if ext in [".jpg", ".jpeg"] else "png"
-            return f"data:image/{tipo};base64,{encoded}"
+                tipo = "jpeg" if ext in [".jpg", ".jpeg"] else "png"
+
+                return f"data:image/{tipo};base64,{encoded}"
 
     return None
 
@@ -104,36 +82,23 @@ def obtener_imagen_base64(nombre_archivo):
 # =====================================================
 
 def aplicar_estilos():
-    """Aplica siempre el tema claro con los colores seleccionados."""
-
-    c = {
-        clave: st.session_state.get(
-            f"color_{clave}",
-            valor,
-        )
-        for clave, valor in COLORES_PREDETERMINADOS.items()
-    }
+    c = st.session_state.colores
 
     st.markdown(
         f"""
         <style>
         :root {{
-            color-scheme: light;
-
-            --fondo: {c["fondo"]};
-            --lateral: {c["lateral"]};
-            --tarjeta: {c["tarjeta"]};
-            --boton: {c["boton"]};
-            --titulo: {c["titulo"]};
-            --secundario: {c["secundario"]};
-            --aviso: {c["aviso"]};
-            --texto-boton: {c["texto_boton"]};
-
-            --borde: rgba(120, 65, 60, 0.20);
-            --sombra: rgba(90, 48, 42, 0.06);
+            --fondo: {c["Fondo principal"]};
+            --lateral: {c["Barra lateral"]};
+            --tarjeta: {c["Tarjetas"]};
+            --boton: {c["Botones"]};
+            --titulo: {c["Títulos"]};
+            --secundario: {c["Texto secundario"]};
+            --aviso: {c["Avisos"]};
         }}
 
-        .stApp {{
+        .stApp,
+        [data-testid="stAppViewContainer"] {{
             background: var(--fondo);
             color: var(--titulo);
         }}
@@ -158,11 +123,7 @@ def aplicar_estilos():
             border-radius: 8px;
         }}
 
-        [data-testid="stSidebar"] [data-baseweb="radio"] label:hover {{
-            background: rgba(255, 255, 255, 0.12);
-        }}
-
-        h1, h2, h3, h4, h5, h6 {{
+        h1, h2, h3, h4 {{
             color: var(--titulo);
         }}
 
@@ -170,18 +131,14 @@ def aplicar_estilos():
             color: var(--secundario);
         }}
 
-        [data-testid="stMarkdownContainer"] {{
-            color: var(--titulo);
-        }}
-
         .bobolo-card {{
             box-sizing: border-box;
             background: var(--tarjeta);
-            border: 1px solid var(--borde);
+            border: 1px solid rgba(120, 65, 60, 0.18);
             border-radius: 20px;
             padding: 22px;
             margin-bottom: 18px;
-            box-shadow: 0 4px 14px var(--sombra);
+            box-shadow: 0 4px 14px rgba(90, 48, 42, 0.045);
             overflow-wrap: anywhere;
         }}
 
@@ -225,16 +182,13 @@ def aplicar_estilos():
             overflow-wrap: anywhere;
         }}
 
-        .bobolo-alert strong {{
-            color: var(--titulo);
-        }}
-
         .bobolo-mascota-img {{
             display: block;
             margin: 0 auto;
             max-width: 100px;
             width: 100%;
             height: auto;
+            object-fit: contain;
             border-radius: 16px;
         }}
 
@@ -248,6 +202,7 @@ def aplicar_estilos():
         .bobolo-sidebar-img {{
             width: 160px;
             height: 160px;
+            max-width: 100%;
             object-fit: contain;
             border-radius: 50%;
             margin-bottom: 8px;
@@ -261,18 +216,20 @@ def aplicar_estilos():
         }}
 
         .stButton > button,
-        [data-testid="stFormSubmitButton"] button {{
+        .stFormSubmitButton > button {{
             background: var(--boton);
-            color: var(--texto-boton);
-            border: 1px solid var(--borde);
+            color: #452923;
+            border: 1px solid rgba(97, 54, 50, 0.12);
             border-radius: 12px;
             min-height: 42px;
+            height: auto;
             font-weight: 700;
             white-space: normal;
+            overflow-wrap: anywhere;
         }}
 
         .stButton > button:hover,
-        [data-testid="stFormSubmitButton"] button:hover {{
+        .stFormSubmitButton > button:hover {{
             background: var(--lateral);
             color: #FFFFFF;
             border-color: var(--lateral);
@@ -280,61 +237,26 @@ def aplicar_estilos():
 
         [data-testid="stFileUploader"] {{
             background: var(--tarjeta);
-            border: 1px solid var(--borde);
             border-radius: 13px;
             padding: 8px;
         }}
 
         [data-testid="stChatInput"] {{
-            background: var(--tarjeta);
-            border: 1px solid var(--borde);
             border-radius: 13px;
-        }}
-
-        [data-testid="stChatInput"] textarea {{
-            color: var(--titulo);
         }}
 
         [data-testid="stExpander"] {{
-            background: var(--tarjeta);
-            border-color: var(--borde);
+            border-color: rgba(120, 65, 60, 0.2);
             border-radius: 13px;
-        }}
-
-        [data-testid="stTextInput"] input,
-        [data-testid="stTextArea"] textarea,
-        [data-testid="stNumberInput"] input {{
-            background: var(--tarjeta);
-            color: var(--titulo);
-            border-color: var(--borde);
-        }}
-
-        [data-baseweb="select"] > div {{
-            background: var(--tarjeta);
-            color: var(--titulo);
-            border-color: var(--borde);
         }}
 
         [data-testid="stMainBlockContainer"] {{
             padding-bottom: 4rem;
-        }}
-
-        [data-testid="stChatMessage"] {{
-            color: var(--titulo);
-        }}
-
-        [data-testid="stAlert"] {{
-            background: var(--tarjeta);
-            color: var(--titulo);
-            border-color: var(--borde);
-        }}
-
-        [data-testid="stCaptionContainer"] {{
-            color: var(--secundario);
+            max-width: 1500px;
         }}
 
         hr {{
-            border-color: var(--borde);
+            border-color: rgba(120, 65, 60, 0.2);
         }}
 
         .bobolo-footnote {{
@@ -343,23 +265,79 @@ def aplicar_estilos():
             line-height: 1.6;
         }}
 
-        @media (max-width: 640px) {{
+        /* Adaptación a pantallas pequeñas */
+
+        @media (max-width: 700px) {{
+            [data-testid="stMainBlockContainer"] {{
+                padding-left: 0.8rem;
+                padding-right: 0.8rem;
+                padding-top: 1rem;
+            }}
+
             .bobolo-card {{
-                padding: 16px;
+                padding: 15px;
                 border-radius: 15px;
+                margin-bottom: 13px;
+            }}
+
+            .bobolo-header {{
+                gap: 10px;
             }}
 
             .bobolo-name {{
                 font-size: 25px;
             }}
 
-            .bobolo-sidebar-img {{
-                width: 115px;
-                height: 115px;
+            .bobolo-subtitle {{
+                font-size: 13px;
             }}
 
             .bobolo-mascota-img {{
-                max-width: 90px;
+                max-width: 85px;
+            }}
+
+            .bobolo-avatar-img {{
+                width: 42px;
+                height: 42px;
+            }}
+
+            .bobolo-sidebar-img {{
+                width: 110px;
+                height: 110px;
+            }}
+
+            .stButton > button,
+            .stFormSubmitButton > button {{
+                width: 100%;
+                min-height: 44px;
+                font-size: 14px;
+            }}
+
+            h1 {{
+                font-size: 1.8rem !important;
+            }}
+
+            h2 {{
+                font-size: 1.5rem !important;
+            }}
+
+            h3 {{
+                font-size: 1.25rem !important;
+            }}
+        }}
+
+        @media (max-width: 400px) {{
+            [data-testid="stMainBlockContainer"] {{
+                padding-left: 0.55rem;
+                padding-right: 0.55rem;
+            }}
+
+            .bobolo-card {{
+                padding: 12px;
+            }}
+
+            .bobolo-name {{
+                font-size: 23px;
             }}
         }}
         </style>
@@ -436,6 +414,7 @@ def cargar_documento(archivo):
 
         if not paginas or not any(p["texto"] for p in paginas):
             st.session_state.estado_documento = "Sin documento"
+
             st.error(
                 "El PDF no contiene texto extraíble. "
                 "Si es un documento escaneado, necesitará OCR."
@@ -456,9 +435,13 @@ def cargar_documento(archivo):
         )
 
     except Exception as error:
-        print(f"Error al leer PDF: {error}")
+        print(f"Error al leer PDF: {error}", flush=True)
+
         st.session_state.estado_documento = "Sin documento"
-        st.error("No se pudo procesar el PDF. Prueba con otro archivo.")
+
+        st.error(
+            "No se pudo procesar el PDF. Prueba con otro archivo."
+        )
 
 
 def quitar_documento():
@@ -480,6 +463,7 @@ def buscar_paginas_relevantes(pregunta, paginas, limite=8):
     palabras = set(
         re.findall(r"\w+", pregunta.lower(), flags=re.UNICODE)
     )
+
     palabras = {p for p in palabras if len(p) > 2}
 
     if not palabras:
@@ -509,6 +493,57 @@ def buscar_paginas_relevantes(pregunta, paginas, limite=8):
     puntuadas.sort(key=lambda x: x[0], reverse=True)
 
     return [pagina for _, pagina in puntuadas[:limite]]
+
+
+# =====================================================
+# REINTENTOS PARA ERRORES TEMPORALES DE GEMINI
+# =====================================================
+
+def generar_con_reintentos(
+    funcion,
+    *args,
+    max_intentos=3,
+    **kwargs,
+):
+    """
+    Reintenta errores temporales 503 de Gemini.
+    Realiza hasta tres intentos adicionales a nivel de esta función
+    únicamente si se mantiene el valor predeterminado de max_intentos=3:
+    tres intentos en total, con esperas de 2 y 4 segundos.
+    """
+    for intento in range(max_intentos):
+        try:
+            return funcion(*args, **kwargs)
+
+        except Exception as error:
+            detalle = str(error).upper()
+            codigo = getattr(error, "code", None)
+
+            if callable(codigo):
+                try:
+                    codigo = codigo()
+                except Exception:
+                    codigo = None
+
+            es_error_temporal = (
+                "503" in detalle
+                or "UNAVAILABLE" in detalle
+                or str(codigo) == "503"
+            )
+
+            if not es_error_temporal or intento == max_intentos - 1:
+                raise
+
+            espera = 2 ** (intento + 1)
+
+            print(
+                f"Gemini no está disponible (503). "
+                f"Reintento {intento + 1}/{max_intentos - 1} "
+                f"en {espera} segundos...",
+                flush=True,
+            )
+
+            time.sleep(espera)
 
 
 # =====================================================
@@ -579,7 +614,8 @@ PREGUNTA:
     try:
         cliente = genai.Client(api_key=api_key)
 
-        respuesta = cliente.models.generate_content(
+        respuesta = generar_con_reintentos(
+            cliente.models.generate_content,
             model="gemini-3.8-flash",
             contents=instruccion,
         )
@@ -587,7 +623,9 @@ PREGUNTA:
         texto = getattr(respuesta, "text", None)
 
         if not texto:
-            return "No se obtuvo una respuesta. Intenta nuevamente.", []
+            return (
+                "No se obtuvo una respuesta. Intenta nuevamente."
+            ), []
 
         return texto, numeros_paginas
 
@@ -595,11 +633,10 @@ PREGUNTA:
         print("\n========== ERROR DE BOBOLO ==========")
         print("Tipo de error:", type(error).__name__)
         print("Detalle:", str(error))
-        print("=====================================\n")
+        print("=====================================\n", flush=True)
 
         return (
-            f"Error de consulta: {type(error).__name__}. "
-            "Revisa la terminal de Python para ver el detalle."
+            f"Error de consulta: {type(error).__name__}: {error}"
         ), []
 
 
@@ -607,7 +644,10 @@ def mostrar_citas(paginas):
     if not paginas:
         return
 
-    citas = ", ".join(f"[Página {n}]" for n in sorted(paginas))
+    citas = ", ".join(
+        f"[Página {n}]"
+        for n in sorted(paginas)
+    )
 
     st.markdown(
         f"""
@@ -648,11 +688,13 @@ def procesar_pregunta(pregunta, destino):
             "respuesta": respuesta,
             "paginas": paginas,
         }
+
     else:
         st.session_state.mensajes.append({
             "role": "user",
             "content": pregunta,
         })
+
         st.session_state.mensajes.append({
             "role": "assistant",
             "content": respuesta,
@@ -706,7 +748,8 @@ def zona_carga(clave):
           <div class="bobolo-mini-title">
             📄 Documento de trabajo
           </div>
-          Arrastra un PDF a la zona de carga o selecciónalo desde tu equipo.
+          Arrastra un PDF a la zona de carga o selecciónalo
+          desde tu equipo.
         </div>
         """,
         unsafe_allow_html=True,
@@ -721,6 +764,53 @@ def zona_carga(clave):
 
     if archivo is not None:
         cargar_documento(archivo)
+
+
+# =====================================================
+# VISTA PREVIA DEL DOCUMENTO
+# =====================================================
+
+def mostrar_vista_previa():
+    if not st.session_state.documento_bytes:
+        return
+
+    with st.expander("👀 Vista previa del PDF", expanded=False):
+        paginas = st.session_state.paginas_documento
+
+        numero = st.selectbox(
+            "Página que deseas consultar",
+            options=list(range(1, len(paginas) + 1)),
+            key="pagina_previa",
+        )
+
+        pagina = paginas[numero - 1]
+
+        st.caption(f"Página {numero} de {len(paginas)}")
+
+        if pagina["texto"]:
+            st.text_area(
+                "Texto extraído de esta página",
+                value=pagina["texto"],
+                height=260,
+                disabled=True,
+                key=(
+                    f"texto_previo_{numero}_"
+                    f"{st.session_state.documento_id[:8]}"
+                ),
+            )
+        else:
+            st.info(
+                "No se extrajo texto de esta página. "
+                "Podría contener imágenes o un escaneo."
+            )
+
+        st.download_button(
+            "Descargar PDF original",
+            data=st.session_state.documento_bytes,
+            file_name=st.session_state.nombre_documento,
+            mime="application/pdf",
+            key="descargar_pdf",
+        )
 
 
 # =====================================================
@@ -813,10 +903,15 @@ def mostrar_inicio():
                 ):
                     procesar_pregunta(sugerencia, "inicio")
 
-        with st.form("form_consulta_rapida", clear_on_submit=True):
+        with st.form(
+            "form_consulta_rapida",
+            clear_on_submit=True,
+        ):
             pregunta = st.text_input(
                 "Tu pregunta",
-                placeholder="Ej.: ¿Qué indica el manual sobre el mantenimiento?",
+                placeholder=(
+                    "Ej.: ¿Qué indica el manual sobre el mantenimiento?"
+                ),
             )
 
             enviar = st.form_submit_button(
@@ -833,6 +928,7 @@ def mostrar_inicio():
             st.markdown("### Respuesta")
             st.markdown(f"**Pregunta:** {resultado['pregunta']}")
             st.markdown(resultado["respuesta"])
+
             mostrar_citas(resultado["paginas"])
 
             if st.button(
@@ -842,7 +938,12 @@ def mostrar_inicio():
                 st.session_state.navigation = "Chat"
                 st.rerun()
 
-        if st.button("Quitar documento", key="inicio_quitar"):
+        mostrar_vista_previa()
+
+        if st.button(
+            "Quitar documento",
+            key="inicio_quitar",
+        ):
             quitar_documento()
             st.rerun()
 
@@ -853,6 +954,7 @@ def mostrar_inicio():
         )
 
     st.markdown("---")
+
     st.caption(
         "Prototipo demostrativo para consultas sobre documentación técnica."
     )
@@ -864,6 +966,7 @@ def mostrar_inicio():
 
 def mostrar_documentos():
     mostrar_cabecera()
+
     st.title("Documentos")
 
     st.write(
@@ -879,16 +982,23 @@ def mostrar_documentos():
               <div class="bobolo-mini-title">📄 Documento activo</div>
               {html.escape(st.session_state.nombre_documento)}<br>
               <p>
-                {len(st.session_state.paginas_documento)} páginas detectadas
+                {len(st.session_state.paginas_documento)}
+                páginas detectadas
               </p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        if st.button("Quitar documento", key="documentos_quitar"):
+        mostrar_vista_previa()
+
+        if st.button(
+            "Quitar documento",
+            key="documentos_quitar",
+        ):
             quitar_documento()
             st.rerun()
+
     else:
         st.info("Todavía no has cargado un documento.")
 
@@ -899,6 +1009,7 @@ def mostrar_documentos():
 
 def mostrar_chat():
     mostrar_cabecera()
+
     st.title("Chat con Bobolo")
 
     if not st.session_state.paginas_documento:
@@ -906,7 +1017,10 @@ def mostrar_chat():
             "Primero debes cargar un PDF para habilitar las consultas."
         )
 
-        if st.button("Ir a Documentos", key="chat_ir_documentos"):
+        if st.button(
+            "Ir a Documentos",
+            key="chat_ir_documentos",
+        ):
             st.session_state.navigation = "Documentos"
             st.rerun()
 
@@ -960,50 +1074,52 @@ def mostrar_chat():
 
 
 # =====================================================
-# CONFIGURACIÓN DE COLORES
+# CONFIGURACIÓN VISUAL
 # =====================================================
 
 def mostrar_configuracion():
     mostrar_cabecera()
-    st.title("Configuración")
 
-    st.markdown("### Personalizar colores")
+    st.title("Personalización")
+
     st.write(
-        "Modifica los colores de Bobolo. Los cambios se aplican "
-        "automáticamente y la aplicación permanece en modo claro."
+        "Modifica los colores de los elementos de la interfaz."
     )
 
-    # Los selectores modifican directamente el estado de la sesión.
-    for clave, etiqueta in ETIQUETAS_COLORES.items():
-        st.color_picker(
-            etiqueta,
-            key=f"color_{clave}",
+    for nombre in COLORES_DEFAULT:
+        clave = f"color_{nombre}"
+
+        if clave not in st.session_state:
+            st.session_state[clave] = (
+                st.session_state.colores[nombre]
+            )
+
+        st.session_state.colores[nombre] = st.color_picker(
+            nombre,
+            key=clave,
         )
 
-    st.markdown("---")
+    col1, col2 = st.columns(2)
 
-    if st.button(
-        "Restablecer colores originales",
-        use_container_width=True,
-    ):
-        for clave, valor in COLORES_PREDETERMINADOS.items():
-            st.session_state[f"color_{clave}"] = valor
+    with col1:
+        if st.button("Aplicar cambios"):
+            st.rerun()
 
-        st.rerun()
+    with col2:
+        if st.button("Restaurar colores originales"):
+            st.session_state.colores = COLORES_DEFAULT.copy()
 
+            for nombre, color in COLORES_DEFAULT.items():
+                st.session_state[f"color_{nombre}"] = color
 
-# =====================================================
-# APLICAR ESTILOS
-# =====================================================
-
-# Se ejecuta en cada actualización de Streamlit.
-# No existe un selector de modo oscuro.
-aplicar_estilos()
+            st.rerun()
 
 
 # =====================================================
 # BARRA LATERAL
 # =====================================================
+
+aplicar_estilos()
 
 with st.sidebar:
     b64_sidebar_cara = obtener_imagen_base64("pato_cara")
@@ -1014,7 +1130,9 @@ with st.sidebar:
             'class="bobolo-sidebar-img" alt="Bobolo">'
         )
     else:
-        sidebar_img_html = '<div style="font-size:54px;">🐤</div>'
+        sidebar_img_html = (
+            '<div style="font-size:54px;">🐤</div>'
+        )
 
     st.markdown(
         f"""
@@ -1035,7 +1153,12 @@ with st.sidebar:
 
     pagina = st.radio(
         "MENÚ PRINCIPAL",
-        ["Inicio", "Documentos", "Chat", "Configuración"],
+        [
+            "Inicio",
+            "Documentos",
+            "Chat",
+            "Configuración",
+        ],
         key="navigation",
     )
 
@@ -1048,6 +1171,7 @@ with st.sidebar:
         st.caption("No hay documentos cargados.")
 
     st.markdown("---")
+
     st.caption("Prototipo demostrativo")
 
 
