@@ -1,4 +1,3 @@
-
 import os
 import re
 import html
@@ -22,31 +21,35 @@ st.set_page_config(
 
 load_dotenv()
 
-# Paleta clara original
-COLORES_DEFAULT = {
-    "Fondo principal": "#FFF2E8",
-    "Barra lateral": "#B94F5B",
-    "Tarjetas": "#FFFBF7",
-    "Botones": "#EBA09A",
-    "Títulos": "#613632",
-    "Texto secundario": "#765650",
-    "Avisos": "#FFE2D2",
+# Paleta del modo claro
+COLORES_CLAROS = {
+    "fondo": "#FFF2E8",
+    "lateral": "#B94F5B",
+    "tarjeta": "#FFFBF7",
+    "boton": "#EBA09A",
+    "titulo": "#613632",
+    "secundario": "#765650",
+    "aviso": "#FFE2D2",
+    "texto_boton": "#452923",
+    "borde": "rgba(120, 65, 60, 0.20)",
+    "sombra": "rgba(90, 48, 42, 0.06)",
 }
 
-# Paleta oscura armonizada: carbón, ciruela y rosa apagado
+# Modo oscuro ligeramente más claro, con tonos cálidos
 COLORES_OSCUROS = {
-    "Fondo principal": "#211E21",
-    "Barra lateral": "#493039",
-    "Tarjetas": "#2D282C",
-    "Botones": "#795660",
-    "Títulos": "#F3E5E8",
-    "Texto secundario": "#D0BEC4",
-    "Avisos": "#3B3036",
+    "fondo": "#29252A",
+    "lateral": "#65434F",
+    "tarjeta": "#353037",
+    "boton": "#896371",
+    "titulo": "#F6E9ED",
+    "secundario": "#D8C8CF",
+    "aviso": "#463841",
+    "texto_boton": "#FFFFFF",
+    "borde": "rgba(238, 211, 222, 0.18)",
+    "sombra": "rgba(0, 0, 0, 0.16)",
 }
 
-if "colores" not in st.session_state:
-    st.session_state.colores = COLORES_DEFAULT.copy()
-
+# El modo se guarda en session_state y no se reinicia al navegar.
 if "modo_visual" not in st.session_state:
     st.session_state.modo_visual = "Claro"
 
@@ -71,14 +74,19 @@ for clave, valor in {
 # =====================================================
 
 def obtener_imagen_base64(nombre_archivo):
-    """Busca una imagen local y la retorna en formato base64 para HTML."""
+    """Busca una imagen local y la retorna en formato base64."""
     for ext in [".jpg", ".jpeg", ".png"]:
         ruta = nombre_archivo + ext
+
         if os.path.exists(ruta):
             with open(ruta, "rb") as img_file:
-                encoded = base64.b64encode(img_file.read()).decode()
-                tipo = "jpeg" if ext == ".jpg" else ext.replace(".", "")
+                encoded = base64.b64encode(
+                    img_file.read()
+                ).decode()
+
+                tipo = "jpeg" if ext == ".jpg" else ext[1:]
                 return f"data:image/{tipo};base64,{encoded}"
+
     return None
 
 
@@ -87,72 +95,27 @@ def obtener_imagen_base64(nombre_archivo):
 # =====================================================
 
 def aplicar_estilos():
-    modo = st.session_state.modo_visual
-
-    if modo == "Oscuro":
+    # Se consulta el modo guardado; no se restablece al navegar.
+    if st.session_state.modo_visual == "Oscuro":
         c = COLORES_OSCUROS
     else:
-        # Claro y Sistema parten de los colores originales.
-        c = st.session_state.colores
-
-    variables_claras = f"""
-        --fondo: {COLORES_DEFAULT["Fondo principal"]};
-        --lateral: {COLORES_DEFAULT["Barra lateral"]};
-        --tarjeta: {COLORES_DEFAULT["Tarjetas"]};
-        --boton: {COLORES_DEFAULT["Botones"]};
-        --titulo: {COLORES_DEFAULT["Títulos"]};
-        --secundario: {COLORES_DEFAULT["Texto secundario"]};
-        --aviso: {COLORES_DEFAULT["Avisos"]};
-        --texto-boton: #452923;
-        --borde: rgba(120, 65, 60, 0.20);
-        --sombra: rgba(90, 48, 42, 0.06);
-    """
-
-    variables_activas = f"""
-        --fondo: {c["Fondo principal"]};
-        --lateral: {c["Barra lateral"]};
-        --tarjeta: {c["Tarjetas"]};
-        --boton: {c["Botones"]};
-        --titulo: {c["Títulos"]};
-        --secundario: {c["Texto secundario"]};
-        --aviso: {c["Avisos"]};
-        --texto-boton: {"#FFFFFF" if modo == "Oscuro" else "#452923"};
-        --borde: {"rgba(226, 194, 205, 0.15)" if modo == "Oscuro" else "rgba(120, 65, 60, 0.20)"};
-        --sombra: {"rgba(0, 0, 0, 0.18)" if modo == "Oscuro" else "rgba(90, 48, 42, 0.06)"};
-    """
-
-    if modo == "Sistema":
-        variables_raiz = variables_claras
-    else:
-        variables_raiz = variables_activas
-
-    css_sistema = ""
-    if modo == "Sistema":
-        css_sistema = f"""
-        @media (prefers-color-scheme: dark) {{
-            :root {{
-                --fondo: {COLORES_OSCUROS["Fondo principal"]};
-                --lateral: {COLORES_OSCUROS["Barra lateral"]};
-                --tarjeta: {COLORES_OSCUROS["Tarjetas"]};
-                --boton: {COLORES_OSCUROS["Botones"]};
-                --titulo: {COLORES_OSCUROS["Títulos"]};
-                --secundario: {COLORES_OSCUROS["Texto secundario"]};
-                --aviso: {COLORES_OSCUROS["Avisos"]};
-                --texto-boton: #FFFFFF;
-                --borde: rgba(226, 194, 205, 0.15);
-                --sombra: rgba(0, 0, 0, 0.18);
-            }}
-        }}
-        """
+        c = COLORES_CLAROS
 
     st.markdown(
         f"""
         <style>
         :root {{
-            {variables_raiz}
+            --fondo: {c["fondo"]};
+            --lateral: {c["lateral"]};
+            --tarjeta: {c["tarjeta"]};
+            --boton: {c["boton"]};
+            --titulo: {c["titulo"]};
+            --secundario: {c["secundario"]};
+            --aviso: {c["aviso"]};
+            --texto-boton: {c["texto_boton"]};
+            --borde: {c["borde"]};
+            --sombra: {c["sombra"]};
         }}
-
-        {css_sistema}
 
         .stApp {{
             background: var(--fondo);
@@ -183,7 +146,7 @@ def aplicar_estilos():
             background: rgba(255, 255, 255, 0.12);
         }}
 
-        h1, h2, h3, h4 {{
+        h1, h2, h3, h4, h5, h6 {{
             color: var(--titulo);
         }}
 
@@ -260,7 +223,7 @@ def aplicar_estilos():
             border-radius: 16px;
         }}
 
-        /* Cara del pato: cabecera */
+        /* Cara del pato en la cabecera */
         .bobolo-avatar-img {{
             width: 50px;
             height: 50px;
@@ -268,7 +231,7 @@ def aplicar_estilos():
             border-radius: 50%;
         }}
 
-        /* Cara del pato: barra lateral */
+        /* Cara del pato en la barra lateral */
         .bobolo-sidebar-img {{
             width: 160px;
             height: 160px;
@@ -352,7 +315,6 @@ def aplicar_estilos():
             line-height: 1.6;
         }}
 
-        /* Ajustes para pantallas pequeñas */
         @media (max-width: 640px) {{
             .bobolo-card {{
                 padding: 16px;
@@ -671,8 +633,12 @@ def procesar_pregunta(pregunta, destino):
 
 def mostrar_cabecera():
     b64_cara = obtener_imagen_base64("pato_cara")
+
     if b64_cara:
-        avatar_html = f'<img src="{b64_cara}" class="bobolo-avatar-img" alt="Bobolo">'
+        avatar_html = (
+            f'<img src="{b64_cara}" '
+            'class="bobolo-avatar-img" alt="Bobolo">'
+        )
     else:
         avatar_html = '<div style="font-size:40px;">🐤</div>'
 
@@ -751,7 +717,10 @@ def mostrar_vista_previa():
                 value=pagina["texto"],
                 height=260,
                 disabled=True,
-                key=f"texto_previo_{numero}_{st.session_state.documento_id[:8]}",
+                key=(
+                    f"texto_previo_{numero}_"
+                    f"{st.session_state.documento_id[:8]}"
+                ),
             )
         else:
             st.info(
@@ -804,10 +773,16 @@ def mostrar_inicio():
 
     with derecha:
         b64_pato = obtener_imagen_base64("pato")
+
         if b64_pato:
-            img_html = f'<img src="{b64_pato}" class="bobolo-mascota-img" alt="Bobolo">'
+            img_html = (
+                f'<img src="{b64_pato}" '
+                'class="bobolo-mascota-img" alt="Bobolo">'
+            )
         else:
-            img_html = '<div style="text-align:center;font-size:90px;">🐤</div>'
+            img_html = (
+                '<div style="text-align:center;font-size:90px;">🐤</div>'
+            )
 
         st.markdown(
             f"""
@@ -919,7 +894,7 @@ def mostrar_documentos():
             <div class="bobolo-card">
               <div class="bobolo-mini-title">📄 Documento activo</div>
               {html.escape(st.session_state.nombre_documento)}<br>
-              <p class="bobolo-small">
+              <p>
                 {len(st.session_state.paginas_documento)} páginas detectadas
               </p>
             </div>
@@ -986,7 +961,7 @@ def mostrar_chat():
                 procesar_pregunta(sugerencia, "chat")
                 st.rerun()
 
-    for i, mensaje in enumerate(st.session_state.mensajes):
+    for mensaje in st.session_state.mensajes:
         with st.chat_message(mensaje["role"]):
             st.markdown(mensaje["content"])
 
@@ -1003,7 +978,7 @@ def mostrar_chat():
 
 
 # =====================================================
-# CONFIGURACIÓN Y PERSONALIZACIÓN
+# CONFIGURACIÓN
 # =====================================================
 
 def mostrar_configuracion():
@@ -1012,66 +987,55 @@ def mostrar_configuracion():
 
     st.markdown("### Apariencia")
     st.write(
-        "Elige cómo quieres que se vea Bobolo. "
-        "La opción Sistema adapta los colores a la apariencia de tu equipo."
+        "Selecciona el modo de visualización de Bobolo."
     )
 
+    # El widget usa el estado existente: no se asigna un valor
+    # nuevo al entrar a esta sección.
     st.selectbox(
         "Modo de visualización",
-        options=["Claro", "Oscuro", "Sistema"],
+        options=["Claro", "Oscuro"],
         key="modo_visual",
     )
 
-    st.caption(
-        "Claro conserva los colores pastel originales. "
-        "Oscuro utiliza una paleta de tonos carbón, ciruela y rosa apagado."
-    )
-
-    st.markdown("---")
-    st.markdown("### Personalización de colores")
-    st.write(
-        "Puedes ajustar los colores del modo claro. "
-        "Si eliges Oscuro, se utilizará su paleta armonizada."
-    )
-
-    for nombre in COLORES_DEFAULT:
-        clave = f"color_{nombre}"
-
-        if clave not in st.session_state:
-            st.session_state[clave] = st.session_state.colores[nombre]
-
-        st.session_state.colores[nombre] = st.color_picker(
-            nombre,
-            key=clave,
+    if st.session_state.modo_visual == "Oscuro":
+        st.markdown(
+            """
+            <div class="bobolo-alert">
+                🌙 Modo oscuro activado. Se utiliza una paleta de tonos
+                carbón, ciruela y rosa suave.
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+            <div class="bobolo-alert">
+                ☀️ Modo claro activado. Se utilizan los colores pastel
+                originales de Bobolo.
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
-    col1, col2 = st.columns(2)
 
-    with col1:
-        if st.button("Aplicar cambios", use_container_width=True):
-            st.rerun()
+# =====================================================
+# APLICACIÓN DE ESTILOS
+# =====================================================
 
-    with col2:
-        if st.button(
-            "Restaurar colores originales",
-            use_container_width=True,
-        ):
-            st.session_state.colores = COLORES_DEFAULT.copy()
-
-            for nombre, color in COLORES_DEFAULT.items():
-                st.session_state[f"color_{nombre}"] = color
-
-            st.rerun()
+# Se ejecuta en cada rerun con el modo que ya está guardado.
+# No se restablece el tema al cambiar de página.
+aplicar_estilos()
 
 
 # =====================================================
 # BARRA LATERAL
 # =====================================================
 
-aplicar_estilos()
-
 with st.sidebar:
     b64_sidebar_cara = obtener_imagen_base64("pato_cara")
+
     if b64_sidebar_cara:
         sidebar_img_html = (
             f'<img src="{b64_sidebar_cara}" '
@@ -1112,7 +1076,6 @@ with st.sidebar:
         st.caption("No hay documentos cargados.")
 
     st.markdown("---")
-
     st.caption("Prototipo demostrativo")
 
 
