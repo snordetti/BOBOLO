@@ -22,10 +22,10 @@ st.set_page_config(
 load_dotenv()
 
 # =====================================================
-# PALETAS DE COLORES
+# PALETA PREDETERMINADA: SIEMPRE MODO CLARO
 # =====================================================
 
-COLORES_CLAROS = {
+COLORES_PREDETERMINADOS = {
     "fondo": "#FFF2E8",
     "lateral": "#B94F5B",
     "tarjeta": "#FFFBF7",
@@ -34,41 +34,24 @@ COLORES_CLAROS = {
     "secundario": "#765650",
     "aviso": "#FFE2D2",
     "texto_boton": "#452923",
-    "borde": "rgba(120, 65, 60, 0.20)",
-    "sombra": "rgba(90, 48, 42, 0.06)",
-}
-
-COLORES_OSCUROS = {
-    "fondo": "#29252A",
-    "lateral": "#65434F",
-    "tarjeta": "#353037",
-    "boton": "#896371",
-    "titulo": "#F6E9ED",
-    "secundario": "#D8C8CF",
-    "aviso": "#463841",
-    "texto_boton": "#FFFFFF",
-    "borde": "rgba(238, 211, 222, 0.18)",
-    "sombra": "rgba(0, 0, 0, 0.16)",
+    "borde": "#E8D2C9",
+    "sombra": "#F2E6DF",
 }
 
 # =====================================================
-# ESTADO PERSISTENTE DE LA APLICACIÓN
+# ESTADO PERSISTENTE
 # =====================================================
 
-# La preferencia visual se guarda en una clave independiente
-# del selector de Configuración.
-if "modo_visual" not in st.session_state:
-    st.session_state["modo_visual"] = "Claro"
-
-
-def guardar_modo_visual():
-    """Guarda la selección del selector en el estado persistente."""
-    st.session_state["modo_visual"] = (
-        st.session_state["selector_modo_visual"]
+if "colores_bobolo" not in st.session_state:
+    st.session_state["colores_bobolo"] = (
+        COLORES_PREDETERMINADOS.copy()
     )
 
+if "colores_personalizados" not in st.session_state:
+    st.session_state["colores_personalizados"] = (
+        COLORES_PREDETERMINADOS.copy()
+    )
 
-# Inicialización de los demás datos de la aplicación.
 valores_iniciales = {
     "nombre_documento": "",
     "paginas_documento": [],
@@ -85,6 +68,25 @@ valores_iniciales = {
 for clave, valor in valores_iniciales.items():
     if clave not in st.session_state:
         st.session_state[clave] = valor
+
+
+def guardar_color(nombre):
+    """Actualiza un color al cambiar su selector."""
+    st.session_state["colores_bobolo"][nombre] = (
+        st.session_state[f"color_{nombre}"]
+    )
+
+
+def restaurar_colores():
+    """Restaura la paleta clara predeterminada."""
+    st.session_state["colores_bobolo"] = (
+        COLORES_PREDETERMINADOS.copy()
+    )
+
+    for nombre, color in COLORES_PREDETERMINADOS.items():
+        clave = f"color_{nombre}"
+        if clave in st.session_state:
+            st.session_state[clave] = color
 
 
 # =====================================================
@@ -113,22 +115,15 @@ def obtener_imagen_base64(nombre_archivo):
 # =====================================================
 
 def aplicar_estilos():
-    """Aplica los estilos correspondientes al modo seleccionado."""
+    """Aplica siempre el tema claro con los colores elegidos."""
 
-    modo = st.session_state.get("modo_visual", "Claro")
-
-    if modo == "Oscuro":
-        c = COLORES_OSCUROS
-        tema_base = "dark"
-    else:
-        c = COLORES_CLAROS
-        tema_base = "light"
+    c = st.session_state["colores_bobolo"]
 
     st.markdown(
         f"""
         <style>
         :root {{
-            color-scheme: {tema_base};
+            color-scheme: light;
 
             --fondo: {c["fondo"]};
             --lateral: {c["lateral"]};
@@ -296,6 +291,7 @@ def aplicar_estilos():
 
         [data-testid="stChatInput"] {{
             background: var(--tarjeta);
+            border: 1px solid var(--borde);
             border-radius: 13px;
         }}
 
@@ -327,23 +323,6 @@ def aplicar_estilos():
             padding-bottom: 4rem;
         }}
 
-        hr {{
-            border-color: var(--borde);
-        }}
-
-        .bobolo-footnote {{
-            color: var(--secundario);
-            font-size: 12px;
-            line-height: 1.6;
-        }}
-
-        /* Ajustes adicionales para que los controles
-           mantengan un contraste adecuado en ambos modos. */
-
-        [data-testid="stChatInput"] {{
-            border: 1px solid var(--borde);
-        }}
-
         [data-testid="stChatMessage"] {{
             color: var(--titulo);
         }}
@@ -356,6 +335,16 @@ def aplicar_estilos():
 
         [data-testid="stCaptionContainer"] {{
             color: var(--secundario);
+        }}
+
+        hr {{
+            border-color: var(--borde);
+        }}
+
+        .bobolo-footnote {{
+            color: var(--secundario);
+            font-size: 12px;
+            line-height: 1.6;
         }}
 
         @media (max-width: 640px) {{
@@ -1021,63 +1010,143 @@ def mostrar_chat():
 
 
 # =====================================================
-# CONFIGURACIÓN
+# CONFIGURACIÓN: COLORES PERSONALIZABLES, SOLO MODO CLARO
 # =====================================================
 
 def mostrar_configuracion():
     mostrar_cabecera()
     st.title("Configuración")
 
-    st.markdown("### Apariencia")
+    st.markdown("### Personalización de colores")
     st.write(
-        "Selecciona el modo de visualización de Bobolo."
+        "Personaliza los colores de Bobolo. "
+        "La aplicación siempre utiliza el modo claro."
     )
 
-    # Se sincroniza el selector con la preferencia guardada.
-    # El modo principal no depende del estado temporal del widget.
-    if (
-        "selector_modo_visual" not in st.session_state
-        or st.session_state["selector_modo_visual"]
-        != st.session_state["modo_visual"]
+    nombres_colores = {
+        "fondo": "Fondo principal",
+        "lateral": "Barra lateral",
+        "tarjeta": "Tarjetas",
+        "boton": "Botones",
+        "titulo": "Títulos",
+        "secundario": "Textos secundarios",
+        "aviso": "Avisos y mensajes",
+        "texto_boton": "Texto de los botones",
+        "borde": "Bordes",
+        "sombra": "Sombras",
+    }
+
+    colores = st.session_state["colores_bobolo"]
+
+    # Distribuye los controles en dos columnas.
+    izquierda, derecha = st.columns(2, gap="large")
+
+    claves = list(nombres_colores.keys())
+
+    for i, clave in enumerate(claves):
+        columna = izquierda if i % 2 == 0 else derecha
+
+        with columna:
+            # Los valores de color se sincronizan antes de crear
+            # cada widget para evitar que la navegación los reinicie.
+            clave_widget = f"color_{clave}"
+
+            if clave_widget not in st.session_state:
+                st.session_state[clave_widget] = colores[clave]
+
+            st.color_picker(
+                nombres_colores[clave],
+                key=clave_widget,
+                on_change=guardar_color,
+                args=(clave,),
+            )
+
+    st.markdown("---")
+
+    if st.button(
+        "Restaurar colores predeterminados",
+        key="restaurar_colores",
+        use_container_width=True,
     ):
-        st.session_state["selector_modo_visual"] = (
-            st.session_state["modo_visual"]
-        )
+        restaurar_colores()
+        st.rerun()
 
-    st.selectbox(
-        "Modo de visualización",
-        options=["Claro", "Oscuro"],
-        key="selector_modo_visual",
-        on_change=guardar_modo_visual,
+    st.markdown("### Vista previa")
+
+    c = st.session_state["colores_bobolo"]
+
+    st.markdown(
+        f"""
+        <div style="
+            background:{c['fondo']};
+            padding:18px;
+            border-radius:16px;
+            border:1px solid {c['borde']};
+        ">
+            <div style="
+                background:{c['lateral']};
+                padding:12px;
+                border-radius:10px;
+                color:#FFFFFF;
+                font-weight:700;
+                margin-bottom:12px;
+            ">
+                Barra lateral de Bobolo
+            </div>
+
+            <div style="
+                background:{c['tarjeta']};
+                border:1px solid {c['borde']};
+                padding:16px;
+                border-radius:12px;
+                color:{c['titulo']};
+            ">
+                <h3 style="color:{c['titulo']};margin-top:0;">
+                    Ejemplo de tarjeta
+                </h3>
+
+                <p style="color:{c['secundario']};">
+                    Así se verán los elementos principales de la aplicación.
+                </p>
+
+                <div style="
+                    background:{c['aviso']};
+                    color:{c['titulo']};
+                    padding:10px;
+                    border-radius:8px;
+                    margin:10px 0;
+                ">
+                    Ejemplo de aviso
+                </div>
+
+                <span style="
+                    display:inline-block;
+                    background:{c['boton']};
+                    color:{c['texto_boton']};
+                    padding:9px 14px;
+                    border:1px solid {c['borde']};
+                    border-radius:9px;
+                    font-weight:700;
+                ">
+                    Botón de ejemplo
+                </span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    if st.session_state["modo_visual"] == "Oscuro":
-        st.markdown(
-            """
-            <div class="bobolo-alert">
-                🌙 Modo oscuro activado. Se utiliza una paleta de tonos
-                carbón, ciruela y rosa suave.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            """
-            <div class="bobolo-alert">
-                ☀️ Modo claro activado. Se utilizan los colores pastel
-                originales de Bobolo.
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    st.caption(
+        "Los cambios se aplican a la interfaz al actualizarse la página. "
+        "La vista previa permite revisar la combinación antes de navegar."
+    )
 
 
 # =====================================================
 # APLICACIÓN DE ESTILOS
 # =====================================================
 
-# Los estilos se aplican en cada ejecución usando el modo persistente.
+# Solo se aplica la paleta clara, con los colores actuales.
 aplicar_estilos()
 
 
