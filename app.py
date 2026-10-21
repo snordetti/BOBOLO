@@ -61,8 +61,7 @@ def obtener_imagen_base64(nombre_archivo):
         if os.path.exists(ruta):
             with open(ruta, "rb") as img_file:
                 encoded = base64.b64encode(img_file.read()).decode()
-                tipo = "jpeg" if ext in [".jpg", ".jpeg"] else "png"
-                return f"data:image/{tipo};base64,{encoded}"
+                return f"data:image/{ext.replace('.', '')};base64,{encoded}"
     return None
 
 
@@ -86,101 +85,31 @@ def aplicar_estilos():
             --aviso: {c["Avisos"]};
         }}
 
-        /* =================================================
-           ESTILOS GENERALES
-           ================================================= */
-
-        .stApp {{
+        /* MODO CLARO: paleta pastel original de Bobolo */
+        .stApp,
+        [data-testid="stAppViewContainer"] {{
             background: var(--fondo);
             color: var(--titulo);
-            transition: background-color 0.2s ease, color 0.2s ease;
         }}
 
-        [data-testid="stHeader"] {{
-            background: transparent;
-        }}
-
-        [data-testid="stMainBlockContainer"] {{
-            width: 100%;
-            max-width: 1500px;
-            padding-bottom: 4rem;
-        }}
-
-        /* =================================================
-           BARRA LATERAL
-           ================================================= */
-
-        [data-testid="stSidebar"] {{
-            background: var(--lateral);
-        }}
+        [data-testid="stHeader"] {{ background: transparent; }}
+        [data-testid="stSidebar"] {{ background: var(--lateral); }}
 
         [data-testid="stSidebar"] *,
         [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] p,
-        [data-testid="stSidebar"] span {{
-            color: #FFFFFF;
-        }}
+        [data-testid="stSidebar"] span {{ color: #FFFFFF; }}
 
         [data-testid="stSidebar"] [data-baseweb="radio"] label {{
             background: transparent;
             border-radius: 8px;
         }}
 
-        [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {{
-            overflow-wrap: anywhere;
-        }}
-
-        /* =================================================
-           TEXTOS
-           ================================================= */
-
-        h1, h2, h3, h4 {{
-            color: var(--titulo);
-            overflow-wrap: anywhere;
-        }}
-
-        p, label {{
-            color: var(--secundario);
-        }}
-
-        .bobolo-name {{
-            color: var(--lateral);
-            font-size: 29px;
-            font-weight: 800;
-            margin: 0;
-            overflow-wrap: anywhere;
-        }}
-
-        .bobolo-subtitle {{
-            color: var(--secundario);
-            font-size: 14px;
-            margin-top: 4px;
-            overflow-wrap: anywhere;
-        }}
-
-        .bobolo-mini-title {{
-            color: var(--titulo);
-            font-weight: 800;
-            font-size: 17px;
-            margin-bottom: 7px;
-            overflow-wrap: anywhere;
-        }}
-
-        .bobolo-footnote {{
-            color: var(--secundario);
-            font-size: 12px;
-            line-height: 1.6;
-            overflow-wrap: anywhere;
-        }}
-
-        /* =================================================
-           TARJETAS
-           ================================================= */
+        h1, h2, h3, h4 {{ color: var(--titulo); }}
+        p, label {{ color: var(--secundario); }}
 
         .bobolo-card {{
             box-sizing: border-box;
-            width: 100%;
-            min-width: 0;
             background: var(--tarjeta);
             border: 1px solid rgba(120, 65, 60, 0.18);
             border-radius: 20px;
@@ -188,7 +117,6 @@ def aplicar_estilos():
             margin-bottom: 18px;
             box-shadow: 0 4px 14px rgba(90, 48, 42, 0.045);
             overflow-wrap: anywhere;
-            transition: background-color 0.2s ease, border-color 0.2s ease;
         }}
 
         .bobolo-header {{
@@ -196,7 +124,19 @@ def aplicar_estilos():
             align-items: center;
             gap: 14px;
             flex-wrap: wrap;
-            min-width: 0;
+        }}
+
+        .bobolo-name {{
+            color: var(--lateral);
+            font-size: 29px;
+            font-weight: 800;
+            margin: 0;
+        }}
+
+        .bobolo-subtitle {{
+            color: var(--secundario);
+            font-size: 14px;
+            margin-top: 4px;
         }}
 
         .bobolo-status {{
@@ -207,12 +147,9 @@ def aplicar_estilos():
             border-radius: 22px;
             font-size: 12px;
             font-weight: 800;
-            overflow-wrap: anywhere;
         }}
 
         .bobolo-alert {{
-            box-sizing: border-box;
-            width: 100%;
             background: var(--aviso);
             color: var(--titulo);
             padding: 13px 16px;
@@ -221,10 +158,6 @@ def aplicar_estilos():
             font-size: 14px;
             overflow-wrap: anywhere;
         }}
-
-        /* =================================================
-           IMÁGENES DEL PATO
-           ================================================= */
 
         .bobolo-mascota-img {{
             display: block;
@@ -239,40 +172,37 @@ def aplicar_estilos():
         .bobolo-avatar-img {{
             width: 50px;
             height: 50px;
-            max-width: 100%;
             object-fit: contain;
             border-radius: 50%;
         }}
 
         .bobolo-sidebar-img {{
             width: 160px;
+            height: 160px;
             max-width: 100%;
-            height: auto;
-            aspect-ratio: 1 / 1;
             object-fit: contain;
             border-radius: 50%;
             margin-bottom: 8px;
         }}
 
-        /* =================================================
-           BOTONES
-           ================================================= */
+        .bobolo-mini-title {{
+            color: var(--titulo);
+            font-weight: 800;
+            font-size: 17px;
+            margin-bottom: 7px;
+        }}
 
         .stButton > button,
         .stFormSubmitButton > button {{
-            box-sizing: border-box;
-            max-width: 100%;
-            min-height: 42px;
-            height: auto;
-            padding: 0.55rem 0.8rem;
             background: var(--boton);
             color: #452923;
             border: 1px solid rgba(97, 54, 50, 0.12);
             border-radius: 12px;
+            min-height: 42px;
+            height: auto;
             font-weight: 700;
             white-space: normal;
             overflow-wrap: anywhere;
-            transition: background-color 0.2s ease, color 0.2s ease;
         }}
 
         .stButton > button:hover,
@@ -282,72 +212,134 @@ def aplicar_estilos():
             border-color: var(--lateral);
         }}
 
-        /* =================================================
-           CARGA DE ARCHIVOS Y CHAT
-           ================================================= */
-
         [data-testid="stFileUploader"] {{
-            box-sizing: border-box;
-            max-width: 100%;
             background: var(--tarjeta);
             border-radius: 13px;
             padding: 8px;
-            overflow-wrap: anywhere;
         }}
 
-        [data-testid="stChatInput"] {{
-            max-width: 100%;
-            border-radius: 13px;
-        }}
-
-        [data-testid="stChatMessage"] {{
-            min-width: 0;
-            overflow-wrap: anywhere;
-        }}
-
-        [data-testid="stChatMessage"] p,
-        [data-testid="stMarkdownContainer"] {{
-            overflow-wrap: anywhere;
-            word-break: normal;
-        }}
+        [data-testid="stChatInput"] {{ border-radius: 13px; }}
 
         [data-testid="stExpander"] {{
             border-color: rgba(120, 65, 60, 0.2);
             border-radius: 13px;
-            max-width: 100%;
         }}
 
-        /* Evitar desbordamientos de tablas y bloques de código */
-        [data-testid="stMarkdownContainer"] table {{
-            display: block;
-            max-width: 100%;
-            overflow-x: auto;
+        [data-testid="stMainBlockContainer"] {{
+            padding-bottom: 4rem;
+            max-width: 1500px;
         }}
 
-        [data-testid="stMarkdownContainer"] pre {{
-            max-width: 100%;
-            overflow-x: auto;
+        hr {{ border-color: rgba(120, 65, 60, 0.2); }}
+
+        .bobolo-footnote {{
+            color: var(--secundario);
+            font-size: 12px;
+            line-height: 1.6;
         }}
 
-        [data-testid="stMarkdownContainer"] img {{
-            max-width: 100%;
-            height: auto;
+        /* MODO OSCURO: misma paleta, con fondos y acentos oscuros.
+           Streamlit puede colocar data-theme en distintos contenedores,
+           por eso se cubren el documento y el propio contenedor. */
+        html[data-theme="dark"],
+        body[data-theme="dark"],
+        [data-theme="dark"] {{
+            --fondo: #191719;
+            --lateral: #713741;
+            --tarjeta: #272327;
+            --boton: #62404A;
+            --titulo: #F3DCD8;
+            --secundario: #D0BFC0;
+            --aviso: #3C2D34;
+            color-scheme: dark;
         }}
 
-        hr {{
-            border-color: rgba(120, 65, 60, 0.2);
+        html[data-theme="dark"] .stApp,
+        body[data-theme="dark"] .stApp,
+        [data-theme="dark"] .stApp,
+        [data-theme="dark"] [data-testid="stAppViewContainer"] {{
+            background: #191719 !important;
+            color: #F3DCD8 !important;
         }}
 
-        /* =================================================
-           ADAPTACIÓN A CELULARES
-           ================================================= */
+        html[data-theme="dark"] [data-testid="stSidebar"],
+        body[data-theme="dark"] [data-testid="stSidebar"],
+        [data-theme="dark"] [data-testid="stSidebar"] {{
+            background: #713741 !important;
+        }}
 
+        html[data-theme="dark"] .bobolo-card,
+        body[data-theme="dark"] .bobolo-card,
+        [data-theme="dark"] .bobolo-card {{
+            background: #272327 !important;
+            border-color: #45373E !important;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+        }}
+
+        html[data-theme="dark"] .bobolo-name,
+        body[data-theme="dark"] .bobolo-name,
+        [data-theme="dark"] .bobolo-name,
+        html[data-theme="dark"] h1,
+        html[data-theme="dark"] h2,
+        html[data-theme="dark"] h3,
+        html[data-theme="dark"] h4,
+        [data-theme="dark"] .bobolo-mini-title {{
+            color: #F3DCD8 !important;
+        }}
+
+        html[data-theme="dark"] p,
+        html[data-theme="dark"] label,
+        html[data-theme="dark"] .bobolo-subtitle,
+        html[data-theme="dark"] .bobolo-footnote,
+        [data-theme="dark"] p,
+        [data-theme="dark"] label {{
+            color: #D0BFC0;
+        }}
+
+        html[data-theme="dark"] .bobolo-alert,
+        html[data-theme="dark"] .bobolo-status,
+        [data-theme="dark"] .bobolo-alert,
+        [data-theme="dark"] .bobolo-status {{
+            background: #3C2D34 !important;
+            color: #F3DCD8 !important;
+        }}
+
+        html[data-theme="dark"] .stButton > button,
+        html[data-theme="dark"] .stFormSubmitButton > button,
+        [data-theme="dark"] .stButton > button,
+        [data-theme="dark"] .stFormSubmitButton > button {{
+            background: #62404A !important;
+            color: #FFFFFF !important;
+            border-color: #79525E !important;
+        }}
+
+        html[data-theme="dark"] .stButton > button:hover,
+        html[data-theme="dark"] .stFormSubmitButton > button:hover,
+        [data-theme="dark"] .stButton > button:hover,
+        [data-theme="dark"] .stFormSubmitButton > button:hover {{
+            background: #713741 !important;
+        }}
+
+        html[data-theme="dark"] [data-testid="stFileUploader"],
+        [data-theme="dark"] [data-testid="stFileUploader"] {{
+            background: #272327 !important;
+            border-color: #45373E !important;
+        }}
+
+        html[data-theme="dark"] [data-testid="stExpander"],
+        [data-theme="dark"] [data-testid="stExpander"] {{
+            border-color: #45373E !important;
+        }}
+
+        html[data-theme="dark"] hr,
+        [data-theme="dark"] hr {{ border-color: #45373E !important; }}
+
+        /* Diseño adaptable para pantallas pequeñas */
         @media (max-width: 700px) {{
             [data-testid="stMainBlockContainer"] {{
                 padding-left: 0.8rem;
                 padding-right: 0.8rem;
                 padding-top: 1rem;
-                padding-bottom: 3rem;
             }}
 
             .bobolo-card {{
@@ -356,40 +348,12 @@ def aplicar_estilos():
                 margin-bottom: 13px;
             }}
 
-            .bobolo-header {{
-                gap: 10px;
-            }}
-
-            .bobolo-name {{
-                font-size: 25px;
-            }}
-
-            .bobolo-subtitle {{
-                font-size: 13px;
-            }}
-
-            .bobolo-mascota-img {{
-                max-width: 85px;
-            }}
-
-            .bobolo-avatar-img {{
-                width: 42px;
-                height: 42px;
-            }}
-
-            .bobolo-sidebar-img {{
-                width: 110px;
-            }}
-
-            .bobolo-alert {{
-                padding: 11px 12px;
-                font-size: 13px;
-            }}
-
-            .bobolo-status {{
-                padding: 7px 10px;
-                font-size: 11px;
-            }}
+            .bobolo-header {{ gap: 10px; }}
+            .bobolo-name {{ font-size: 25px; }}
+            .bobolo-subtitle {{ font-size: 13px; }}
+            .bobolo-mascota-img {{ max-width: 85px; }}
+            .bobolo-avatar-img {{ width: 42px; height: 42px; }}
+            .bobolo-sidebar-img {{ width: 110px; height: 110px; }}
 
             .stButton > button,
             .stFormSubmitButton > button {{
@@ -398,21 +362,9 @@ def aplicar_estilos():
                 font-size: 14px;
             }}
 
-            [data-testid="stFileUploader"] {{
-                padding: 5px;
-            }}
-
-            h1 {{
-                font-size: 1.8rem !important;
-            }}
-
-            h2 {{
-                font-size: 1.5rem !important;
-            }}
-
-            h3 {{
-                font-size: 1.25rem !important;
-            }}
+            h1 {{ font-size: 1.8rem !important; }}
+            h2 {{ font-size: 1.5rem !important; }}
+            h3 {{ font-size: 1.25rem !important; }}
         }}
 
         @media (max-width: 400px) {{
@@ -420,162 +372,8 @@ def aplicar_estilos():
                 padding-left: 0.55rem;
                 padding-right: 0.55rem;
             }}
-
-            .bobolo-card {{
-                padding: 12px;
-            }}
-
-            .bobolo-name {{
-                font-size: 23px;
-            }}
-        }}
-
-        @media (prefers-reduced-motion: reduce) {{
-            *,
-            *::before,
-            *::after {{
-                transition: none !important;
-                animation: none !important;
-            }}
-        }}
-
-        /* =================================================
-           ADAPTACIÓN DE COLORES SEGÚN EL TEMA DE STREAMLIT
-           ================================================= */
-
-        /* Tema oscuro: se reemplazan los colores pastel por tonos oscuros. */
-        [data-theme="dark"] .stApp,
-        [data-theme="dark"] [data-testid="stAppViewContainer"] {{
-            background: #171A21;
-            color: #F1E9E7;
-        }}
-
-        [data-theme="dark"] .bobolo-card {{
-            background: #242832;
-            border-color: #3A3F4B;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-        }}
-
-        [data-theme="dark"] .bobolo-name,
-        [data-theme="dark"] h1,
-        [data-theme="dark"] h2,
-        [data-theme="dark"] h3,
-        [data-theme="dark"] h4,
-        [data-theme="dark"] .bobolo-mini-title {{
-            color: #F4D3CE;
-        }}
-
-        [data-theme="dark"] .bobolo-subtitle,
-        [data-theme="dark"] p,
-        [data-theme="dark"] label,
-        [data-theme="dark"] .bobolo-footnote {{
-            color: #D0C5C4;
-        }}
-
-        [data-theme="dark"] .bobolo-alert,
-        [data-theme="dark"] .bobolo-status {{
-            background: #38303A;
-            color: #F4DCD7;
-            border-color: #51404B;
-        }}
-
-        [data-theme="dark"] [data-testid="stFileUploader"] {{
-            background: #242832;
-            border: 1px solid #3A3F4B;
-        }}
-
-        [data-theme="dark"] .stButton > button,
-        [data-theme="dark"] .stFormSubmitButton > button {{
-            background: #49404A;
-            color: #FFFFFF;
-            border-color: #65535F;
-        }}
-
-        [data-theme="dark"] .stButton > button:hover,
-        [data-theme="dark"] .stFormSubmitButton > button:hover {{
-            background: #B94F5B;
-            color: #FFFFFF;
-            border-color: #B94F5B;
-        }}
-
-        [data-theme="dark"] [data-testid="stExpander"] {{
-            border-color: #454956;
-        }}
-
-        [data-theme="dark"] hr {{
-            border-color: #454956;
-        }}
-
-        /* Tema claro: conserva los colores configurados por el usuario. */
-        [data-theme="light"] .stApp,
-        [data-theme="light"] [data-testid="stAppViewContainer"] {{
-            background: var(--fondo);
-            color: var(--titulo);
-        }}
-
-        [data-theme="light"] .bobolo-card {{
-            background: var(--tarjeta);
-        }}
-
-        [data-theme="light"] .bobolo-alert,
-        [data-theme="light"] .bobolo-status {{
-            background: var(--aviso);
-            color: var(--titulo);
-        }}
-
-        /* Respeta la preferencia del sistema si el tema del navegador es oscuro. */
-        @media (prefers-color-scheme: dark) {{
-            [data-theme="auto"] .stApp,
-            [data-theme="auto"] [data-testid="stAppViewContainer"] {{
-                background: #171A21;
-                color: #F1E9E7;
-            }}
-
-            [data-theme="auto"] .bobolo-card {{
-                background: #242832;
-                border-color: #3A3F4B;
-            }}
-
-            [data-theme="auto"] .bobolo-name,
-            [data-theme="auto"] h1,
-            [data-theme="auto"] h2,
-            [data-theme="auto"] h3,
-            [data-theme="auto"] h4,
-            [data-theme="auto"] .bobolo-mini-title {{
-                color: #F4D3CE;
-            }}
-
-            [data-theme="auto"] .bobolo-subtitle,
-            [data-theme="auto"] p,
-            [data-theme="auto"] label,
-            [data-theme="auto"] .bobolo-footnote {{
-                color: #D0C5C4;
-            }}
-
-            [data-theme="auto"] .bobolo-alert,
-            [data-theme="auto"] .bobolo-status {{
-                background: #38303A;
-                color: #F4DCD7;
-            }}
-
-            [data-theme="auto"] [data-testid="stFileUploader"] {{
-                background: #242832;
-                border: 1px solid #3A3F4B;
-            }}
-
-            [data-theme="auto"] .stButton > button,
-            [data-theme="auto"] .stFormSubmitButton > button {{
-                background: #49404A;
-                color: #FFFFFF;
-                border-color: #65535F;
-            }}
-
-            [data-theme="auto"] .stButton > button:hover,
-            [data-theme="auto"] .stFormSubmitButton > button:hover {{
-                background: #B94F5B;
-                color: #FFFFFF;
-                border-color: #B94F5B;
-            }}
+            .bobolo-card {{ padding: 12px; }}
+            .bobolo-name {{ font-size: 23px; }}
         }}
         </style>
         """,
@@ -735,15 +533,9 @@ def consultar_bobolo(pregunta):
     api_key = os.getenv("GEMINI_API_KEY")
 
     if not api_key:
-        try:
-            api_key = st.secrets["GEMINI_API_KEY"]
-        except Exception:
-            api_key = None
-
-    if not api_key:
         return (
             "No se encuentra configurada la conexión del asistente. "
-            "Comprueba la configuración de la clave API sin compartirla."
+            "Comprueba el archivo .env sin compartir tu clave."
         ), []
 
     relevantes = buscar_paginas_relevantes(
@@ -882,14 +674,10 @@ def procesar_pregunta(pregunta, destino):
 
 def mostrar_cabecera():
     b64_cara = obtener_imagen_base64("pato_cara")
-
     if b64_cara:
-        avatar_html = (
-            f'<img src="{b64_cara}" '
-            'class="bobolo-avatar-img" alt="Bobolo">'
-        )
+        avatar_html = f'<img src="{b64_cara}" class="bobolo-avatar-img" alt="Bobolo">'
     else:
-        avatar_html = '<div style="font-size:40px;">🐤</div>'
+        avatar_html = '<div style="font-size:30px;">🐤</div>'
 
     st.markdown(
         f"""
@@ -966,10 +754,7 @@ def mostrar_vista_previa():
                 value=pagina["texto"],
                 height=260,
                 disabled=True,
-                key=(
-                    f"texto_previo_{numero}_"
-                    f"{st.session_state.documento_id[:8]}"
-                ),
+                key=f"texto_previo_{numero}_{st.session_state.documento_id[:8]}",
             )
         else:
             st.info(
@@ -983,7 +768,6 @@ def mostrar_vista_previa():
             file_name=st.session_state.nombre_documento,
             mime="application/pdf",
             key="descargar_pdf",
-            use_container_width=True,
         )
 
 
@@ -1023,20 +807,14 @@ def mostrar_inicio():
 
     with derecha:
         b64_pato = obtener_imagen_base64("pato")
-
         if b64_pato:
-            img_html = (
-                f'<img src="{b64_pato}" '
-                'class="bobolo-mascota-img" alt="Bobolo">'
-            )
+            img_html = f'<img src="{b64_pato}" class="bobolo-mascota-img" alt="Bobolo">'
         else:
-            img_html = (
-                '<div style="text-align:center;font-size:90px;">🐤</div>'
-            )
+            img_html = '<div style="text-align:center;font-size:90px;">🐤</div>'
 
         st.markdown(
             f"""
-            <div class="bobolo-card" style="text-align:center;">
+            <div class="bobolo-card" style="text-align: center;">
               {img_html}
               <p style="text-align:center;font-size:18px;font-weight:800;margin-top:12px;">
                 ¡Listo para ayudarte!
@@ -1102,18 +880,13 @@ def mostrar_inicio():
             if st.button(
                 "Continuar en el chat",
                 key="continuar_chat",
-                use_container_width=True,
             ):
                 st.session_state.navigation = "Chat"
                 st.rerun()
 
         mostrar_vista_previa()
 
-        if st.button(
-            "Quitar documento",
-            key="inicio_quitar",
-            use_container_width=True,
-        ):
+        if st.button("Quitar documento", key="inicio_quitar"):
             quitar_documento()
             st.rerun()
 
@@ -1159,11 +932,7 @@ def mostrar_documentos():
 
         mostrar_vista_previa()
 
-        if st.button(
-            "Quitar documento",
-            key="documentos_quitar",
-            use_container_width=True,
-        ):
+        if st.button("Quitar documento", key="documentos_quitar"):
             quitar_documento()
             st.rerun()
     else:
@@ -1183,11 +952,7 @@ def mostrar_chat():
             "Primero debes cargar un PDF para habilitar las consultas."
         )
 
-        if st.button(
-            "Ir a Documentos",
-            key="chat_ir_documentos",
-            use_container_width=True,
-        ):
+        if st.button("Ir a Documentos", key="chat_ir_documentos"):
             st.session_state.navigation = "Documentos"
             st.rerun()
 
@@ -1224,7 +989,7 @@ def mostrar_chat():
                 procesar_pregunta(sugerencia, "chat")
                 st.rerun()
 
-    for mensaje in st.session_state.mensajes:
+    for i, mensaje in enumerate(st.session_state.mensajes):
         with st.chat_message(mensaje["role"]):
             st.markdown(mensaje["content"])
 
@@ -1248,10 +1013,7 @@ def mostrar_configuracion():
     mostrar_cabecera()
     st.title("Personalización")
 
-    st.write(
-        "Modifica los colores de los elementos de la interfaz. "
-        "El modo claro u oscuro se configura desde el menú de Streamlit."
-    )
+    st.write("Modifica los colores de los elementos de la interfaz.")
 
     for nombre in COLORES_DEFAULT:
         clave = f"color_{nombre}"
@@ -1267,17 +1029,11 @@ def mostrar_configuracion():
     col1, col2 = st.columns(2)
 
     with col1:
-        if st.button(
-            "Aplicar cambios",
-            use_container_width=True,
-        ):
+        if st.button("Aplicar cambios"):
             st.rerun()
 
     with col2:
-        if st.button(
-            "Restaurar colores originales",
-            use_container_width=True,
-        ):
+        if st.button("Restaurar colores originales"):
             st.session_state.colores = COLORES_DEFAULT.copy()
 
             for nombre, color in COLORES_DEFAULT.items():
@@ -1294,12 +1050,8 @@ aplicar_estilos()
 
 with st.sidebar:
     b64_sidebar_cara = obtener_imagen_base64("pato_cara")
-
     if b64_sidebar_cara:
-        sidebar_img_html = (
-            f'<img src="{b64_sidebar_cara}" '
-            'class="bobolo-sidebar-img" alt="Bobolo">'
-        )
+        sidebar_img_html = f'<img src="{b64_sidebar_cara}" class="bobolo-sidebar-img" alt="Bobolo">'
     else:
         sidebar_img_html = '<div style="font-size:54px;">🐤</div>'
 
@@ -1335,6 +1087,7 @@ with st.sidebar:
         st.caption("No hay documentos cargados.")
 
     st.markdown("---")
+
     st.caption("Prototipo demostrativo")
 
 
