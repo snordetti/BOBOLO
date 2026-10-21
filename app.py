@@ -21,7 +21,10 @@ st.set_page_config(
 
 load_dotenv()
 
-# Paleta del modo claro
+# =====================================================
+# PALETAS DE COLORES
+# =====================================================
+
 COLORES_CLAROS = {
     "fondo": "#FFF2E8",
     "lateral": "#B94F5B",
@@ -35,7 +38,6 @@ COLORES_CLAROS = {
     "sombra": "rgba(90, 48, 42, 0.06)",
 }
 
-# Modo oscuro ligeramente más claro, con tonos cálidos
 COLORES_OSCUROS = {
     "fondo": "#29252A",
     "lateral": "#65434F",
@@ -49,11 +51,25 @@ COLORES_OSCUROS = {
     "sombra": "rgba(0, 0, 0, 0.16)",
 }
 
-# El modo se guarda en session_state y no se reinicia al navegar.
-if "modo_visual" not in st.session_state:
-    st.session_state.modo_visual = "Claro"
+# =====================================================
+# ESTADO PERSISTENTE DE LA APLICACIÓN
+# =====================================================
 
-for clave, valor in {
+# La preferencia visual se guarda en una clave independiente
+# del selector de Configuración.
+if "modo_visual" not in st.session_state:
+    st.session_state["modo_visual"] = "Claro"
+
+
+def guardar_modo_visual():
+    """Guarda la selección del selector en el estado persistente."""
+    st.session_state["modo_visual"] = (
+        st.session_state["selector_modo_visual"]
+    )
+
+
+# Inicialización de los demás datos de la aplicación.
+valores_iniciales = {
     "nombre_documento": "",
     "paginas_documento": [],
     "documento_bytes": None,
@@ -64,7 +80,9 @@ for clave, valor in {
     "pregunta_inicio": "",
     "respuesta_inicio": None,
     "paginas_citadas": [],
-}.items():
+}
+
+for clave, valor in valores_iniciales.items():
     if clave not in st.session_state:
         st.session_state[clave] = valor
 
@@ -84,7 +102,7 @@ def obtener_imagen_base64(nombre_archivo):
                     img_file.read()
                 ).decode()
 
-                tipo = "jpeg" if ext == ".jpg" else ext[1:]
+                tipo = "jpeg" if ext in [".jpg", ".jpeg"] else "png"
                 return f"data:image/{tipo};base64,{encoded}"
 
     return None
@@ -95,16 +113,23 @@ def obtener_imagen_base64(nombre_archivo):
 # =====================================================
 
 def aplicar_estilos():
-    # Se consulta el modo guardado; no se restablece al navegar.
-    if st.session_state.modo_visual == "Oscuro":
+    """Aplica los estilos correspondientes al modo seleccionado."""
+
+    modo = st.session_state.get("modo_visual", "Claro")
+
+    if modo == "Oscuro":
         c = COLORES_OSCUROS
+        tema_base = "dark"
     else:
         c = COLORES_CLAROS
+        tema_base = "light"
 
     st.markdown(
         f"""
         <style>
         :root {{
+            color-scheme: {tema_base};
+
             --fondo: {c["fondo"]};
             --lateral: {c["lateral"]};
             --tarjeta: {c["tarjeta"]};
@@ -213,7 +238,6 @@ def aplicar_estilos():
             color: var(--titulo);
         }}
 
-        /* Pato de cuerpo completo */
         .bobolo-mascota-img {{
             display: block;
             margin: 0 auto;
@@ -223,7 +247,6 @@ def aplicar_estilos():
             border-radius: 16px;
         }}
 
-        /* Cara del pato en la cabecera */
         .bobolo-avatar-img {{
             width: 50px;
             height: 50px;
@@ -231,7 +254,6 @@ def aplicar_estilos():
             border-radius: 50%;
         }}
 
-        /* Cara del pato en la barra lateral */
         .bobolo-sidebar-img {{
             width: 160px;
             height: 160px;
@@ -313,6 +335,27 @@ def aplicar_estilos():
             color: var(--secundario);
             font-size: 12px;
             line-height: 1.6;
+        }}
+
+        /* Ajustes adicionales para que los controles
+           mantengan un contraste adecuado en ambos modos. */
+
+        [data-testid="stChatInput"] {{
+            border: 1px solid var(--borde);
+        }}
+
+        [data-testid="stChatMessage"] {{
+            color: var(--titulo);
+        }}
+
+        [data-testid="stAlert"] {{
+            background: var(--tarjeta);
+            color: var(--titulo);
+            border-color: var(--borde);
+        }}
+
+        [data-testid="stCaptionContainer"] {{
+            color: var(--secundario);
         }}
 
         @media (max-width: 640px) {{
@@ -990,15 +1033,25 @@ def mostrar_configuracion():
         "Selecciona el modo de visualización de Bobolo."
     )
 
-    # El widget usa el estado existente: no se asigna un valor
-    # nuevo al entrar a esta sección.
+    # Se sincroniza el selector con la preferencia guardada.
+    # El modo principal no depende del estado temporal del widget.
+    if (
+        "selector_modo_visual" not in st.session_state
+        or st.session_state["selector_modo_visual"]
+        != st.session_state["modo_visual"]
+    ):
+        st.session_state["selector_modo_visual"] = (
+            st.session_state["modo_visual"]
+        )
+
     st.selectbox(
         "Modo de visualización",
         options=["Claro", "Oscuro"],
-        key="modo_visual",
+        key="selector_modo_visual",
+        on_change=guardar_modo_visual,
     )
 
-    if st.session_state.modo_visual == "Oscuro":
+    if st.session_state["modo_visual"] == "Oscuro":
         st.markdown(
             """
             <div class="bobolo-alert">
@@ -1024,8 +1077,7 @@ def mostrar_configuracion():
 # APLICACIÓN DE ESTILOS
 # =====================================================
 
-# Se ejecuta en cada rerun con el modo que ya está guardado.
-# No se restablece el tema al cambiar de página.
+# Los estilos se aplican en cada ejecución usando el modo persistente.
 aplicar_estilos()
 
 
