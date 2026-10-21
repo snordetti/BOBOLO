@@ -1,3 +1,4 @@
+
 import os
 import re
 import html
@@ -22,7 +23,7 @@ st.set_page_config(
 load_dotenv()
 
 # =====================================================
-# PALETA PREDETERMINADA: SIEMPRE MODO CLARO
+# COLORES PREDETERMINADOS
 # =====================================================
 
 COLORES_PREDETERMINADOS = {
@@ -34,23 +35,29 @@ COLORES_PREDETERMINADOS = {
     "secundario": "#765650",
     "aviso": "#FFE2D2",
     "texto_boton": "#452923",
-    "borde": "#E8D2C9",
-    "sombra": "#F2E6DF",
+}
+
+ETIQUETAS_COLORES = {
+    "fondo": "Fondo principal",
+    "lateral": "Barra lateral",
+    "tarjeta": "Tarjetas y paneles",
+    "boton": "Botones",
+    "titulo": "Títulos",
+    "secundario": "Texto secundario",
+    "aviso": "Avisos y mensajes destacados",
+    "texto_boton": "Texto de los botones",
 }
 
 # =====================================================
 # ESTADO PERSISTENTE
 # =====================================================
 
-if "colores_bobolo" not in st.session_state:
-    st.session_state["colores_bobolo"] = (
-        COLORES_PREDETERMINADOS.copy()
-    )
+# Los colores se conservan mientras dure la sesión.
+for clave, valor in COLORES_PREDETERMINADOS.items():
+    nombre_estado = f"color_{clave}"
 
-if "colores_personalizados" not in st.session_state:
-    st.session_state["colores_personalizados"] = (
-        COLORES_PREDETERMINADOS.copy()
-    )
+    if nombre_estado not in st.session_state:
+        st.session_state[nombre_estado] = valor
 
 valores_iniciales = {
     "nombre_documento": "",
@@ -70,31 +77,13 @@ for clave, valor in valores_iniciales.items():
         st.session_state[clave] = valor
 
 
-def guardar_color(nombre):
-    """Actualiza un color al cambiar su selector."""
-    st.session_state["colores_bobolo"][nombre] = (
-        st.session_state[f"color_{nombre}"]
-    )
-
-
-def restaurar_colores():
-    """Restaura la paleta clara predeterminada."""
-    st.session_state["colores_bobolo"] = (
-        COLORES_PREDETERMINADOS.copy()
-    )
-
-    for nombre, color in COLORES_PREDETERMINADOS.items():
-        clave = f"color_{nombre}"
-        if clave in st.session_state:
-            st.session_state[clave] = color
-
-
 # =====================================================
-# FUNCIONES AUXILIARES PARA IMÁGENES
+# IMÁGENES
 # =====================================================
 
 def obtener_imagen_base64(nombre_archivo):
-    """Busca una imagen local y la retorna en formato base64."""
+    """Busca una imagen local y la convierte a base64."""
+
     for ext in [".jpg", ".jpeg", ".png"]:
         ruta = nombre_archivo + ext
 
@@ -104,8 +93,8 @@ def obtener_imagen_base64(nombre_archivo):
                     img_file.read()
                 ).decode()
 
-                tipo = "jpeg" if ext in [".jpg", ".jpeg"] else "png"
-                return f"data:image/{tipo};base64,{encoded}"
+            tipo = "jpeg" if ext in [".jpg", ".jpeg"] else "png"
+            return f"data:image/{tipo};base64,{encoded}"
 
     return None
 
@@ -115,9 +104,15 @@ def obtener_imagen_base64(nombre_archivo):
 # =====================================================
 
 def aplicar_estilos():
-    """Aplica siempre el tema claro con los colores elegidos."""
+    """Aplica siempre el tema claro con los colores seleccionados."""
 
-    c = st.session_state["colores_bobolo"]
+    c = {
+        clave: st.session_state.get(
+            f"color_{clave}",
+            valor,
+        )
+        for clave, valor in COLORES_PREDETERMINADOS.items()
+    }
 
     st.markdown(
         f"""
@@ -133,8 +128,9 @@ def aplicar_estilos():
             --secundario: {c["secundario"]};
             --aviso: {c["aviso"]};
             --texto-boton: {c["texto_boton"]};
-            --borde: {c["borde"]};
-            --sombra: {c["sombra"]};
+
+            --borde: rgba(120, 65, 60, 0.20);
+            --sombra: rgba(90, 48, 42, 0.06);
         }}
 
         .stApp {{
@@ -498,7 +494,12 @@ def buscar_paginas_relevantes(pregunta, paginas, limite=8):
             continue
 
         puntuacion = sum(
-            len(re.findall(r"\b" + re.escape(palabra) + r"\b", texto))
+            len(
+                re.findall(
+                    r"\b" + re.escape(palabra) + r"\b",
+                    texto,
+                )
+            )
             for palabra in palabras
         )
 
@@ -695,7 +696,7 @@ def mostrar_cabecera():
 
 
 # =====================================================
-# CARGA REUTILIZABLE
+# CARGA DE DOCUMENTOS
 # =====================================================
 
 def zona_carga(clave):
@@ -720,53 +721,6 @@ def zona_carga(clave):
 
     if archivo is not None:
         cargar_documento(archivo)
-
-
-# =====================================================
-# VISTA PREVIA DEL DOCUMENTO
-# =====================================================
-
-def mostrar_vista_previa():
-    if not st.session_state.documento_bytes:
-        return
-
-    with st.expander("👀 Vista previa del PDF", expanded=False):
-        paginas = st.session_state.paginas_documento
-
-        numero = st.selectbox(
-            "Página que deseas consultar",
-            options=list(range(1, len(paginas) + 1)),
-            key="pagina_previa",
-        )
-
-        pagina = paginas[numero - 1]
-
-        st.caption(f"Página {numero} de {len(paginas)}")
-
-        if pagina["texto"]:
-            st.text_area(
-                "Texto extraído de esta página",
-                value=pagina["texto"],
-                height=260,
-                disabled=True,
-                key=(
-                    f"texto_previo_{numero}_"
-                    f"{st.session_state.documento_id[:8]}"
-                ),
-            )
-        else:
-            st.info(
-                "No se extrajo texto de esta página. "
-                "Podría contener imágenes o un escaneo."
-            )
-
-        st.download_button(
-            "Descargar PDF original",
-            data=st.session_state.documento_bytes,
-            file_name=st.session_state.nombre_documento,
-            mime="application/pdf",
-            key="descargar_pdf",
-        )
 
 
 # =====================================================
@@ -888,8 +842,6 @@ def mostrar_inicio():
                 st.session_state.navigation = "Chat"
                 st.rerun()
 
-        mostrar_vista_previa()
-
         if st.button("Quitar documento", key="inicio_quitar"):
             quitar_documento()
             st.rerun()
@@ -933,8 +885,6 @@ def mostrar_documentos():
             """,
             unsafe_allow_html=True,
         )
-
-        mostrar_vista_previa()
 
         if st.button("Quitar documento", key="documentos_quitar"):
             quitar_documento()
@@ -1010,143 +960,44 @@ def mostrar_chat():
 
 
 # =====================================================
-# CONFIGURACIÓN: COLORES PERSONALIZABLES, SOLO MODO CLARO
+# CONFIGURACIÓN DE COLORES
 # =====================================================
 
 def mostrar_configuracion():
     mostrar_cabecera()
     st.title("Configuración")
 
-    st.markdown("### Personalización de colores")
+    st.markdown("### Personalizar colores")
     st.write(
-        "Personaliza los colores de Bobolo. "
-        "La aplicación siempre utiliza el modo claro."
+        "Modifica los colores de Bobolo. Los cambios se aplican "
+        "automáticamente y la aplicación permanece en modo claro."
     )
 
-    nombres_colores = {
-        "fondo": "Fondo principal",
-        "lateral": "Barra lateral",
-        "tarjeta": "Tarjetas",
-        "boton": "Botones",
-        "titulo": "Títulos",
-        "secundario": "Textos secundarios",
-        "aviso": "Avisos y mensajes",
-        "texto_boton": "Texto de los botones",
-        "borde": "Bordes",
-        "sombra": "Sombras",
-    }
-
-    colores = st.session_state["colores_bobolo"]
-
-    # Distribuye los controles en dos columnas.
-    izquierda, derecha = st.columns(2, gap="large")
-
-    claves = list(nombres_colores.keys())
-
-    for i, clave in enumerate(claves):
-        columna = izquierda if i % 2 == 0 else derecha
-
-        with columna:
-            # Los valores de color se sincronizan antes de crear
-            # cada widget para evitar que la navegación los reinicie.
-            clave_widget = f"color_{clave}"
-
-            if clave_widget not in st.session_state:
-                st.session_state[clave_widget] = colores[clave]
-
-            st.color_picker(
-                nombres_colores[clave],
-                key=clave_widget,
-                on_change=guardar_color,
-                args=(clave,),
-            )
+    # Los selectores modifican directamente el estado de la sesión.
+    for clave, etiqueta in ETIQUETAS_COLORES.items():
+        st.color_picker(
+            etiqueta,
+            key=f"color_{clave}",
+        )
 
     st.markdown("---")
 
     if st.button(
-        "Restaurar colores predeterminados",
-        key="restaurar_colores",
+        "Restablecer colores originales",
         use_container_width=True,
     ):
-        restaurar_colores()
+        for clave, valor in COLORES_PREDETERMINADOS.items():
+            st.session_state[f"color_{clave}"] = valor
+
         st.rerun()
 
-    st.markdown("### Vista previa")
-
-    c = st.session_state["colores_bobolo"]
-
-    st.markdown(
-        f"""
-        <div style="
-            background:{c['fondo']};
-            padding:18px;
-            border-radius:16px;
-            border:1px solid {c['borde']};
-        ">
-            <div style="
-                background:{c['lateral']};
-                padding:12px;
-                border-radius:10px;
-                color:#FFFFFF;
-                font-weight:700;
-                margin-bottom:12px;
-            ">
-                Barra lateral de Bobolo
-            </div>
-
-            <div style="
-                background:{c['tarjeta']};
-                border:1px solid {c['borde']};
-                padding:16px;
-                border-radius:12px;
-                color:{c['titulo']};
-            ">
-                <h3 style="color:{c['titulo']};margin-top:0;">
-                    Ejemplo de tarjeta
-                </h3>
-
-                <p style="color:{c['secundario']};">
-                    Así se verán los elementos principales de la aplicación.
-                </p>
-
-                <div style="
-                    background:{c['aviso']};
-                    color:{c['titulo']};
-                    padding:10px;
-                    border-radius:8px;
-                    margin:10px 0;
-                ">
-                    Ejemplo de aviso
-                </div>
-
-                <span style="
-                    display:inline-block;
-                    background:{c['boton']};
-                    color:{c['texto_boton']};
-                    padding:9px 14px;
-                    border:1px solid {c['borde']};
-                    border-radius:9px;
-                    font-weight:700;
-                ">
-                    Botón de ejemplo
-                </span>
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    st.caption(
-        "Los cambios se aplican a la interfaz al actualizarse la página. "
-        "La vista previa permite revisar la combinación antes de navegar."
-    )
-
 
 # =====================================================
-# APLICACIÓN DE ESTILOS
+# APLICAR ESTILOS
 # =====================================================
 
-# Solo se aplica la paleta clara, con los colores actuales.
+# Se ejecuta en cada actualización de Streamlit.
+# No existe un selector de modo oscuro.
 aplicar_estilos()
 
 
